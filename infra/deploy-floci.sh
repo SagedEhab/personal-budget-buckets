@@ -22,7 +22,7 @@ ORIGIN=http://localhost:4566
 SERVICES="auth buckets transactions insights"
 TMP=out/.deploy; mkdir -p "$TMP"
 
-if ! curl -s -o /dev/null http://localhost:4566/_floci/health; then
+if ! curl -s http://localhost:4566/_floci/health > /dev/null; then
   echo "Floci is not running. Start Docker Desktop, then:"
   echo "  docker compose -f infra/floci/docker-compose.yml up -d"; exit 1
 fi
