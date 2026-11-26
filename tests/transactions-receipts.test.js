@@ -5,7 +5,9 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-// Dummy settings so the S3 library can build a form (Floci-style test keys, not secrets)
+// Dummy settings so the S3 library can build a form (Floci-style test keys, not secrets).
+// AWS_PROFILE is removed so the library does not warn about two kinds of credentials.
+delete process.env.AWS_PROFILE;
 process.env.RECEIPTS_BUCKET = 'pb-receipts-test';
 process.env.S3_PUBLIC_ENDPOINT = 'http://localhost:4566';
 process.env.AWS_REGION = 'us-east-1';
