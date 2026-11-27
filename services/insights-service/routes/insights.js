@@ -1,4 +1,4 @@
-// Insights & Reports service (owner: [TEAMMATE 2]).
+// Insights, Reports & Admin service (owner: Omar).
 // Business capability: turn the user's transactions and budgets into decisions:
 // a monthly dashboard, multi-month trends with projections, and downloadable CSV reports.
 // It stores no financial data of its own except generated reports:
