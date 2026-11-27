@@ -19,7 +19,7 @@ open.er-api.com exchange-rate API.
 |---|---|
 | `services/auth-service` | register, login (scrypt, lockout after 5 failures), profile, admin user list/disable |
 | `services/buckets-service` | **Saged**: buckets, effective limit, rollover, hard limit, transfers, SNS alerts, archive, templates; `check-spend` / `evaluate` for Transactions |
-| `services/transactions-service` | **Salma Amir**: income/expenses, filters, currency conversion, summaries, receipts (S3 pre-signed URLs) |
+| `services/transactions-service` | **Salma Amir**: income/expenses, filters, currency conversion (shared rate cache in DynamoDB), summaries, safe receipt uploads (S3 pre-signed POST with size/type limits + file-type check), own KMS key `alias/pb-transactions`, double-submit protection, export/delete my data, Neon Postgres audit trail and admin analytics. Set-up scripts in `infra/` run automatically in `deploy-floci.sh`; the Neon connection string must be stored once in Secrets Manager as `pb/neon-url` (steps in `infra/setup-neon.sh`) |
 | `services/insights-service` | **Omar Mohamed**: dashboard, trends, CSV reports (S3), admin overview |
 | `packages/pb-common` | shared: JWT auth middleware, Secrets Manager loader, validator, redacting JSON logger + EMF metrics, DynamoDB store, service-to-service client |
 | `frontend/` | HTML/CSS/JS app (auth, dashboard, buckets, transactions, reports, admin), CSP, no innerHTML |
