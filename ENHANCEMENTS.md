@@ -385,7 +385,7 @@ report sections, video). If time runs out, drop enhancements, not required work.
 
 | Item | Owner | Status |
 |---|---|---|
-| 1b Neon audit log | Omar | Report only (§16 future work): new account + internet, too much for tonight |
+| 1b Neon external database | Salma | Planned: Neon Postgres for the Transactions service (audit trail of created, edited and deleted transactions + admin spending analytics in SQL), connection string in Secrets Manager |
 | 1c Redis cache and rate limiting | — | Report only: ElastiCache did not answer on our Floci (tested 25 Nov) |
 | 2a CloudFront | — | Report only: CloudFront did not answer on our Floci (tested 25 Nov) |
 | 2b WAF | Saged | **Done 26 Nov**: web ACL with per-IP limit + 3 AWS rule groups. Not attached: needs CloudFront (§16) |
@@ -393,13 +393,16 @@ report sections, video). If time runs out, drop enhancements, not required work.
 | 3b Lambda concurrency | Saged | **Done 26 Nov**: Floci enforces it (503 over the cap) |
 | 4a Dashboard and X-Ray | Omar | Stretch, only if time is left |
 | 4b Throttle values | Saged | **Done 26 Nov**: `SCALE=aws` 1,000/s burst 2,000 |
-| 4c Load test | Salma | Planned (1 h) |
+| 4c Load test | Salma | **Done 26 Nov**: k6 normal and stress profiles (`tests/load/`) |
 | Report: 1a, 2c, 3c scaling write-up | Salma | Planned (1 h), also covers 1c and 2a as "what we would add on real AWS" |
 | 5a MFA (admins required) | Omar | Planned (3 h) |
 | 5b Refresh tokens and real logout | Omar | Stretch, only if time is left |
 | 5c Breached-password check | Omar | Planned (1 h) |
-| 5e Receipt upload field + safe uploads | Salma | Planned (2.5 h) |
-| 5f Download my data / delete my account | All: Salma (transactions + receipts, 45 min), Saged (buckets, 30 min, **done 26 Nov**: ST-18), Omar (account + the flow that calls every service, 1.25 h) | Planned |
+| 5e Receipt upload field + safe uploads | Salma | **Done 26 Nov**: S3 size/type policy, first-bytes check, waiting spot (TX-08 to TX-12, ST-16, ST-17) |
+| Transactions KMS key (own key, separate from 5k) | Salma | **Done 26 Nov**: `alias/pb-transactions` on PBTransactions + receipts, rotation (TX-16) |
+| Double-submit protection (idempotent create) | Salma | **Done 26 Nov** (TX-17 to TX-19) |
+| Shared exchange-rate cache in DynamoDB (instead of 1c Redis) | Salma | **Done 26 Nov** (TX-20 to TX-22) |
+| 5f Download my data / delete my account | All: Salma (transactions + receipts, 45 min, **done 26 Nov**: TX-13 to TX-15), Saged (buckets, 30 min, **done 26 Nov**: ST-18), Omar (account + the flow that calls every service, 1.25 h) | Planned |
 | 5h CloudTrail, GuardDuty, Security Hub, Config | Saged | **Done 26 Nov** (set-up); Floci creates them but produces no events (§16); screenshots for §11 by Omar |
 | 5j Backups and recovery drill | Saged | **Done 26 Nov**: restore drill PASS |
 | 5k KMS customer-managed key | Saged | **Done 26 Nov** |
