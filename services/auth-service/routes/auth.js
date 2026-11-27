@@ -9,6 +9,7 @@ const {
 } = require('pb-common');
 const { hashPassword, verifyPassword, dummyVerify } = require('../lib/passwords');
 const { createMfa } = require('./mfa');
+const breached = require('../lib/breachedPasswords');
 
 const CURRENCIES = ['EGP', 'USD', 'EUR', 'GBP', 'SAR', 'AED', 'KWD'];
 const MAX_FAILED_LOGINS = 5;
@@ -75,6 +76,16 @@ function createAuthRoutes(logger) {
   // 1. Register a standard user (role is always "user": it cannot be chosen by the client)
   router.post('/register', wrap(async (req, res) => {
     const input = validate(req.body, registerSchema);
+    // 5c: refuse passwords that appear in known data breaches (attackers try those first).
+    const check = await breached.checkPassword(input.password);
+    if (!check.checked) {
+      logger.warn('PASSWORD_BREACH_CHECK_SKIPPED', { requestId: req.requestId, reason: check.reason });
+    } else if (check.breached) {
+      logger.warn('PASSWORD_BREACHED_REJECTED', { requestId: req.requestId, seenInBreaches: check.count });
+      logger.metric('BreachedPasswordsRejected', 1);
+      throw errors.unprocessable('PASSWORD_BREACHED',
+        'This password has appeared in a known data breach, so attackers may try it. Please choose a different one.');
+    }
     const user = await createUser(input);
     if (!user) throw errors.conflict('EMAIL_TAKEN', 'An account with this e-mail already exists.');
     logger.info('USER_REGISTERED', { requestId: req.requestId, userId: user.id });

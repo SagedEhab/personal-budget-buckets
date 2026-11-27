@@ -12,6 +12,8 @@ delete process.env.JWT_SECRET_ID;
 
 const totp = require('../services/auth-service/lib/totp');
 const mfaSecrets = require('../services/auth-service/lib/mfaSecrets');
+// No internet in these tests: the breached-password API (5c) answers "not found".
+require('../services/auth-service/lib/breachedPasswords').setFetch(async () => ({ ok: true, text: async () => '' }));
 const app = require('../services/auth-service/app');
 
 let base;
