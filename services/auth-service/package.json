@@ -11,7 +11,7 @@
     "zip": "node ../../scripts/zip-lambda.js ."
   },
   "dependencies": {
-    "dotenv": "^17.2.0",
+    "dotenv": "^18.0.10",
     "express": "^5.1.0",
     "pb-common": "file:../../packages/pb-common",
     "qrcode": "^1.5.4",
