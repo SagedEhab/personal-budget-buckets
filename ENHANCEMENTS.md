@@ -315,7 +315,7 @@ Floci actually evaluates, and record the answer in §16.
 - Anyone with the signing key can make a valid token for any user, even an admin. Changing it every
   30 days limits how long a leaked key is useful.
 - A rotation Lambda makes the new key; the services sign with the new key and still accept the previous
-  one, so **nobody is logged out**. Test ST-17 and a live drill on Floci.
+  one, so **nobody is logged out**. Test ST-19 and a live drill on Floci.
 
 ### 5m. Tamper-proof audit logs (S3 Object Lock)
 **Owner:** Saged (infra) · **Done 26 Nov**, in `infra/security/setup-audit.sh`
@@ -399,11 +399,11 @@ report sections, video). If time runs out, drop enhancements, not required work.
 | 5b Refresh tokens and real logout | Omar | Stretch, only if time is left |
 | 5c Breached-password check | Omar | Planned (1 h) |
 | 5e Receipt upload field + safe uploads | Salma | Planned (2.5 h) |
-| 5f Download my data / delete my account | All: Salma (transactions + receipts, 45 min), Saged (buckets, 30 min, **done 26 Nov**: ST-16), Omar (account + the flow that calls every service, 1.25 h) | Planned |
+| 5f Download my data / delete my account | All: Salma (transactions + receipts, 45 min), Saged (buckets, 30 min, **done 26 Nov**: ST-18), Omar (account + the flow that calls every service, 1.25 h) | Planned |
 | 5h CloudTrail, GuardDuty, Security Hub, Config | Saged | **Done 26 Nov** (set-up); Floci creates them but produces no events (§16); screenshots for §11 by Omar |
 | 5j Backups and recovery drill | Saged | **Done 26 Nov**: restore drill PASS |
 | 5k KMS customer-managed key | Saged | **Done 26 Nov** |
-| 5l JWT key rotation | Saged | **Done 26 Nov**: ST-17 + live drill |
+| 5l JWT key rotation | Saged | **Done 26 Nov**: ST-19 + live drill |
 | 5m Object Lock on audit logs | Saged | **Done 26 Nov**: AccessDenied on delete |
 | 5n Security alerts (EventBridge) | Saged | **Done 26 Nov**: 5/5 rules + delivery checked |
 | Dependabot + CodeQL | Saged | **Done 26 Nov** (config files); turn on alerts in repo settings |
