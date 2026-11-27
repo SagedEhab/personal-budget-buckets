@@ -1,0 +1,20 @@
+{
+  "name": "pb-auth-service",
+  "version": "1.0.0",
+  "description": "Personal Budget Buckets - auth service (Express on AWS Lambda)",
+  "main": "server.js",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "zip": "node ../../scripts/zip-lambda.js ."
+  },
+  "dependencies": {
+    "dotenv": "^17.2.0",
+    "express": "^5.1.0",
+    "pb-common": "file:../../packages/pb-common",
+    "qrcode": "^1.5.4",
+    "serverless-http": "^3.2.0"
+  }
+}
