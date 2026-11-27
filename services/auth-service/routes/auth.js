@@ -1,4 +1,4 @@
-// Auth service (SHARED team component): registration, login, profile and admin user management.
+// Auth service (owner: Omar; shared by every service for login and roles): registration, login, profile and admin user management.
 // Table PBUsers (env USERS_TABLE):
 //   pk USER#<id>        sk PROFILE  -> the user profile (role, status, password hash, lockout state)
 //   pk EMAIL#<email>    sk EMAIL    -> e-mail uniqueness index pointing at the user id
@@ -8,6 +8,7 @@ const {
   createStore, createAuth, issueToken, validate, wrap, errors, checkId
 } = require('pb-common');
 const { hashPassword, verifyPassword, dummyVerify } = require('../lib/passwords');
+const { createMfa } = require('./mfa');
 
 const CURRENCIES = ['EGP', 'USD', 'EUR', 'GBP', 'SAR', 'AED', 'KWD'];
 const MAX_FAILED_LOGINS = 5;
@@ -36,7 +37,8 @@ const statusSchema = { status: { type: 'string', required: true, enum: ['active'
 function publicUser(u) {
   return {
     id: u.id, name: u.name, email: u.email, role: u.role, status: u.status,
-    baseCurrency: u.baseCurrency, createdAt: u.createdAt, lastLoginAt: u.lastLoginAt || null
+    baseCurrency: u.baseCurrency, createdAt: u.createdAt, lastLoginAt: u.lastLoginAt || null,
+    mfaEnabled: Boolean(u.mfaEnabled)
   };
 }
 
@@ -51,6 +53,11 @@ function createAuthRoutes(logger) {
     }
   });
   const router = express.Router();
+  const mfa = createMfa({
+    users, logger, requireAuth, issueToken, publicUser, verifyPassword,
+    tokenTtlSec: TOKEN_TTL_SEC, lockMinutes: LOCK_MINUTES
+  });
+  router.use('/mfa', mfa.router);
 
   async function createUser({ name, email, password, baseCurrency = 'EGP', role = 'user' }) {
     const id = crypto.randomUUID();
@@ -109,6 +116,12 @@ function createAuthRoutes(logger) {
     if (user.status !== 'active') {
       logger.warn('LOGIN_BLOCKED_DISABLED', { requestId: req.requestId, userId: user.id });
       throw errors.forbidden('This account has been disabled. Contact the administrator.');
+    }
+    // Password correct: if two-step login applies, hand out a short MFA ticket instead of a token.
+    const second = await mfa.loginStep(user, req);
+    if (second) {
+      await users.update(user.pk, user.sk, { failedLogins: 0 });
+      return res.status(200).json(second);
     }
     const updated = await users.update(user.pk, user.sk, {
       failedLogins: 0, lockedUntil: null, lastLoginAt: new Date().toISOString()
