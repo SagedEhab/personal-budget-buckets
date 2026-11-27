@@ -38,9 +38,16 @@ async function downloadUrl(key, filename) {
   }), { expiresIn: URL_TTL_SEC });
 }
 
+// Used by "download my data" (5f) to put the CSV text into the export.
+async function read(key) {
+  const { GetObjectCommand } = require('@aws-sdk/client-s3');
+  const r = await getClients().s3.send(new GetObjectCommand({ Bucket: process.env.REPORTS_BUCKET, Key: key }));
+  return r.Body.transformToString('utf-8');
+}
+
 async function remove(key) {
   const { DeleteObjectCommand } = require('@aws-sdk/client-s3');
   await getClients().s3.send(new DeleteObjectCommand({ Bucket: process.env.REPORTS_BUCKET, Key: key }));
 }
 
-module.exports = { usesS3, keyFor, save, downloadUrl, remove, URL_TTL_SEC };
+module.exports = { usesS3, keyFor, save, read, downloadUrl, remove, URL_TTL_SEC };
