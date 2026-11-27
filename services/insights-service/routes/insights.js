@@ -226,6 +226,38 @@ function createInsightRoutes(logger) {
     res.status(204).end();
   }));
 
+  // ----- Privacy rights (enhancement 5f, Omar): download my data / delete my data -----
+  // Called by the Auth service's "download my data" and "delete my account" flow, with the
+  // user's own token, so only that user's reports (pk USER#<own id>) can be read or deleted.
+  router.get('/me/export', wrap(async (req, res) => {
+    const items = await store.query(userPk(req), { prefix: 'REPORT#' });
+    const reports = [];
+    for (const r of items.sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1))) {
+      let csv = r.content || null;
+      if (r.s3Key) {
+        try { csv = await files.read(r.s3Key); } catch (error) { csv = null; }
+      }
+      const { pk, sk, content, s3Key, ...meta } = r;
+      reports.push({ ...meta, csv });
+    }
+    logger.info('PRIVACY_EXPORT', { requestId: req.requestId, userId: req.user.id, count: reports.length });
+    res.status(200).json({ service: 'insights', exportedAt: new Date().toISOString(), userId: req.user.id, count: reports.length, reports });
+  }));
+
+  router.delete('/me', wrap(async (req, res) => {
+    // Must be asked for explicitly, so a stray request cannot wipe someone's reports
+    const { confirm } = validate(req.body || {}, { confirm: { type: 'boolean', required: true } });
+    if (confirm !== true) throw errors.badRequest('Send {"confirm": true} to delete all your reports.');
+    const items = await store.query(userPk(req), { prefix: 'REPORT#' });
+    let filesDeleted = 0;
+    for (const r of items) {
+      if (r.s3Key) { await files.remove(r.s3Key); filesDeleted += 1; } // a failure stops here: retry is safe
+      await store.remove(r.pk, r.sk);
+    }
+    logger.info('PRIVACY_DELETE', { requestId: req.requestId, userId: req.user.id, reports: items.length, filesDeleted });
+    res.status(200).json({ service: 'insights', deletedReports: items.length, deletedFiles: filesDeleted });
+  }));
+
   return router;
 }
 
