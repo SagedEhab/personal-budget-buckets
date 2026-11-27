@@ -215,6 +215,34 @@ function createBucketRoutes(logger) {
     res.status(201).json(publicBucket(transfer));
   }));
 
+  // ----- privacy rights (ENHANCEMENTS 5f, Egypt PDPL 151/2020: access and erasure) -----
+  // Only the caller's own partition (USER#<their id>) is read or deleted: the key design makes it
+  // impossible to reach another user's data. The Auth service calls both with the user's token
+  // when the user asks to download their data or delete their account.
+  const EXPORT_KIND = { BUCKET: 'buckets', TRANSFER: 'transfers', ALERT: 'alerts' };
+
+  router.get('/me/export', wrap(async (req, res) => {
+    const items = await store.query(userPk(req));
+    const data = { buckets: [], transfers: [], alerts: [] };
+    for (const item of items) {
+      const kind = EXPORT_KIND[item.sk.split('#')[0]];
+      if (kind) data[kind].push(publicBucket(item));   // ALERTKEY markers are internal: not personal data
+    }
+    logger.info('DATA_EXPORTED', { requestId: req.requestId, userId: req.user.id, items: items.length });
+    res.set('Content-Disposition', 'attachment; filename="my-buckets-data.json"');
+    res.status(200).json({ service: 'buckets', userId: req.user.id, exportedAt: new Date().toISOString(), ...data });
+  }));
+
+  router.delete('/me', wrap(async (req, res) => {
+    // Same contract as Transactions and Insights: the Auth service sends {"confirm": true} to every service
+    const { confirm } = validate(req.body || {}, { confirm: { type: 'boolean', required: true } });
+    if (confirm !== true) throw errors.badRequest('Send {"confirm": true} to delete all your buckets data.');
+    const items = await store.query(userPk(req));
+    for (const item of items) await store.remove(item.pk, item.sk);
+    logger.info('DATA_ERASED', { requestId: req.requestId, userId: req.user.id, items: items.length });
+    res.status(200).json({ service: 'buckets', deleted: items.length });
+  }));
+
   // ----- buckets -----
   // List buckets with their live budget status for a month (default: this month)
   router.get('/', wrap(async (req, res) => {
