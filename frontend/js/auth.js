@@ -115,7 +115,8 @@ const AuthView = {
   resetStep() {
     if (!this.stepBox) return;
     UI.clear(this.stepBox).classList.add('hidden');
-    this.loginForm.classList.remove('hidden');
+    // Show the login form again only if the "Log in" tab is the one selected.
+    this.loginForm.classList.toggle('hidden', !document.getElementById('tab-login').classList.contains('active'));
   },
 
   // Step 2 of login: the code from the app, or a recovery code.
@@ -193,7 +194,8 @@ const AccountView = {
   init() {
     this.view = UI.el('main', { id: 'view-account', class: 'view hidden' },
       UI.el('div', { class: 'view-head' }, UI.el('h1', { text: 'Security' })),
-      UI.el('section', { class: 'card' }, UI.el('h2', { text: 'Two-step login' }), UI.el('div', { id: 'mfa-panel' })));
+      UI.el('section', { class: 'card' }, UI.el('h2', { text: 'Two-step login' }), UI.el('div', { id: 'mfa-panel' })),
+      UI.el('section', { class: 'card' }, UI.el('h2', { text: 'Your data' }), UI.el('div', { id: 'privacy-panel' })));
     const views = document.querySelectorAll('main.view');
     views[views.length - 1].after(this.view);
     document.getElementById('logout').before(UI.el('button', {
@@ -207,6 +209,7 @@ const AccountView = {
     let me;
     try { me = await Api.get('/api/auth/me'); } catch (e) { UI.fail(e); return; }
     sessionStorage.setItem('pb_user', JSON.stringify(me));
+    this.renderPrivacy(me);
 
     if (!me.mfaEnabled) {
       panel.append(
@@ -236,6 +239,53 @@ const AccountView = {
         await Api.post('/api/auth/mfa/disable', { password: d.password, code: d.code });
         UI.toast('Two-step login is off.');
         this.load();
+      } catch (error) { err.textContent = error.message; }
+    });
+    panel.append(form);
+  },
+
+  // Privacy rights (5f): download everything we hold, or delete the account and all its data.
+  renderPrivacy(me) {
+    const panel = UI.clear(document.getElementById('privacy-panel'));
+    const download = UI.el('button', { class: 'primary', type: 'button', text: 'Download my data' });
+    download.addEventListener('click', async () => {
+      download.disabled = true;
+      try {
+        const data = await Api.get('/api/auth/me/export');
+        const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+        const a = UI.el('a', { href: url, download: `my-budget-data-${UI.today()}.json` });
+        document.body.append(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        UI.toast('Your data has been downloaded.');
+      } catch (e) { UI.fail(e); } finally { download.disabled = false; }
+    });
+    panel.append(UI.el('p', { class: 'muted', text: 'Get a copy of everything we hold about you: profile, buckets, transactions and reports (JSON file).' }), download);
+
+    if (me.role === 'admin') {
+      panel.append(UI.el('p', { class: 'muted', text: 'Administrator accounts cannot be deleted from the app.' }));
+      return;
+    }
+    const err = UI.el('p', { class: 'error', role: 'alert' });
+    const form = UI.el('form', { novalidate: true },
+      UI.el('h3', { text: 'Delete my account' }),
+      UI.el('p', { class: 'muted', text: 'This deletes your account, buckets, transactions, receipts and reports. It cannot be undone. Download your data first if you want to keep it.' }),
+      UI.el('label', {}, 'Password ', UI.el('input', { name: 'password', type: 'password', autocomplete: 'current-password', required: true, maxlength: '128' })),
+      me.mfaEnabled ? UI.el('label', {}, 'Code from the app ', UI.el('input', { name: 'code', inputmode: 'numeric', autocomplete: 'one-time-code', maxlength: '6', required: true })) : null,
+      UI.el('label', {}, UI.el('input', { name: 'sure', type: 'checkbox' }), ' I understand that everything will be deleted'),
+      UI.el('button', { class: 'danger', type: 'submit', text: 'Delete my account' }), err);
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      err.textContent = '';
+      const d = UI.formData(form);
+      if (!d.sure) { err.textContent = 'Tick the box to confirm.'; return; }
+      if (!d.password) { err.textContent = 'Enter your password.'; return; }
+      const body = { confirm: true, password: d.password };
+      if (me.mfaEnabled) body.code = d.code;
+      try {
+        await Api.request('DELETE', '/api/auth/me', body);
+        AuthView.logout('Your account and all its data have been deleted.');
       } catch (error) { err.textContent = error.message; }
     });
     panel.append(form);

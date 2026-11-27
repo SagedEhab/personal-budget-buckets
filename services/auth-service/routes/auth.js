@@ -9,6 +9,7 @@ const {
 } = require('pb-common');
 const { hashPassword, verifyPassword, dummyVerify } = require('../lib/passwords');
 const { createMfa } = require('./mfa');
+const { createPrivacy } = require('./privacy');
 const breached = require('../lib/breachedPasswords');
 
 const CURRENCIES = ['EGP', 'USD', 'EUR', 'GBP', 'SAR', 'AED', 'KWD'];
@@ -59,6 +60,7 @@ function createAuthRoutes(logger) {
     tokenTtlSec: TOKEN_TTL_SEC, lockMinutes: LOCK_MINUTES
   });
   router.use('/mfa', mfa.router);
+  router.use(createPrivacy({ users, logger, requireAuth, publicUser, verifyPassword }).router);
 
   async function createUser({ name, email, password, baseCurrency = 'EGP', role = 'user' }) {
     const id = crypto.randomUUID();
