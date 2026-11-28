@@ -114,14 +114,26 @@ function createAuthRoutes(logger) {
       e.status = 429;
       throw e;
     }
+    // Reserve this attempt BEFORE checking the password, in one atomic write. Without this, parallel
+    // guesses all read the same old counter and all get checked (attack pack AT-06: 20 of 20 got through).
+    const attempt = await users.takeAttempt(user.pk, user.sk, {
+      counter: 'failedLogins', lockField: 'lockedUntil', max: MAX_FAILED_LOGINS, now: new Date().toISOString()
+    });
+    if (attempt === null) {
+      logger.warn('LOGIN_BLOCKED_LOCKED', { requestId: req.requestId, userId: user.id, ip: req.ip });
+      const e = errors.unprocessable('ACCOUNT_LOCKED', `Too many failed attempts. Try again after ${LOCK_MINUTES} minutes.`);
+      e.status = 429;
+      throw e;
+    }
     const ok = await verifyPassword(password, user.passwordHash);
     if (!ok) {
-      const failedLogins = (user.failedLogins || 0) + 1;
+      const failedLogins = attempt;
       const lock = failedLogins >= MAX_FAILED_LOGINS;
-      await users.update(user.pk, user.sk, {
-        failedLogins: lock ? 0 : failedLogins,
-        lockedUntil: lock ? new Date(Date.now() + LOCK_MINUTES * 60000).toISOString() : null
-      });
+      if (lock) {
+        await users.update(user.pk, user.sk, {
+          failedLogins: 0, lockedUntil: new Date(Date.now() + LOCK_MINUTES * 60000).toISOString()
+        });
+      }
       logger.warn(lock ? 'ACCOUNT_LOCKED' : 'LOGIN_FAILED', { requestId: req.requestId, userId: user.id, attempt: failedLogins, ip: req.ip });
       logger.metric('FailedLogins', 1);
       throw fail();
