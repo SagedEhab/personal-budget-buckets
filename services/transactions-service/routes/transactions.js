@@ -80,6 +80,10 @@ function createTransactionRoutes(logger) {
       requestId: req.requestId
     });
     if (r.status === 404) throw errors.badRequest('bucketId does not refer to one of your buckets.');
+    if (r.status === 409 && r.body && r.body.error && r.body.error.code === 'BUCKET_BUSY') {
+      // Hard-limit lock held by another expense for longer than the wait (attack pack AT-05, Saged)
+      throw errors.conflict('BUCKET_BUSY', 'Another expense for this bucket is being saved. Please try again.');
+    }
     if (r.status === 409) throw errors.conflict('BUCKET_ARCHIVED', 'This bucket is archived and cannot receive new expenses.');
     if (r.status !== 200) {
       logger.error('DEPENDENCY_ERROR', { requestId: req.requestId, target: 'buckets', status: r.status });
